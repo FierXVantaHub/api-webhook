@@ -1,3 +1,4 @@
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
@@ -73,35 +74,36 @@ export default async function handler(req, res) {
             timestamp: new Date().toISOString()
         };
 
+        // Buttons always show — join server only when jobId exists
+        const buttons = [
+            ...(jobId ? [{
+                type: 2,
+                style: 5,
+                label: "⚡ Join Target Server",
+                url: `https://www.roblox.com/games/start?placeId=${placeId}&instanceId=${jobId}`
+            }] : []),
+            {
+                type: 2,
+                style: 5,
+                label: "🎮 Join Player",
+                url: `https://www.roblox.com/games/${placeId}/game-instances`
+            },
+            {
+                type: 2,
+                style: 5,
+                label: "👤 View Profile",
+                url: `https://www.roblox.com/users/${userId}/profile`
+            }
+        ];
+
         const payload = {
             username: "Telemetry Engine",
             avatar_url: checkedAvatar,
             embeds: [embed],
-            ...(jobId && {
-                components: [{
-                    type: 1,
-                    components: [
-                        {
-                            type: 2,
-                            style: 5,
-                            label: "⚡ Join Target Server",
-                            url: `https://www.roblox.com/games/start?placeId=${placeId}&instanceId=${jobId}`
-                        },
-                        {
-                            type: 2,
-                            style: 5,
-                            label: "🎮 Join Player",
-                            url: `https://www.roblox.com/games/${placeId}/game-instances`
-                        },
-                        {
-                            type: 2,
-                            style: 5,
-                            label: "👤 View Profile",
-                            url: `https://www.roblox.com/users/${userId}/profile`
-                        }
-                    ]
-                }]
-            })
+            components: [{
+                type: 1,
+                components: buttons
+            }]
         };
 
         const webhookRes = await fetch(process.env.DISCORD_WEBHOOK, {
