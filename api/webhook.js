@@ -23,7 +23,7 @@ export default async function handler(req, res) {
         const locale         = data.Locale          || "Unknown";
         const executorName   = data.ExecutorUsed    || "Unknown";
         const deviceType     = data.DeviceType      || "Unknown Device";
-        const gameTitle      = data.GameTitle       || "Unknown Location";
+        const gameTitle      = data.GameTitle       || "Unknown";
         const placeId        = data.PlaceId         || "0";
         const jobId          = data.JobId           || "";
         const playerCapacity = data.PlayerCapacity  || "N/A";
@@ -41,7 +41,6 @@ export default async function handler(req, res) {
                 ? "🇪🇺 EU-Hop"
                 : "🌏 Global-Route";
 
-        // Avatar fetching
         let checkedAvatar = "https://i.imgur.com/wSTFkRM.png";
         try {
             const avatarUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=180x180&format=Png`;
