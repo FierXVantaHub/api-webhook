@@ -76,6 +76,107 @@ export default async function handler(req, res) {
             timestamp: new Date().toISOString()
         };
 
+        // Build buttons — only include ones with valid URLs
+        const buttons = [];
+
+        if (jobId) {
+            buttons.push({
+                type: 2,
+                style: 5,
+                label: "⚡ Join Target Server",
+                url: `https://www.roblox.com/games/start?placeId=${placeId}&instanceId=${jobId}`
+            });
+            buttons.push({
+                type: 2,
+                style: 5,
+                label: "🎮 Join Player",
+                url: `https://www.roblox.com/games/start?placeId=${placeId}&gameInstanceId=${jobId}`
+            });
+        }
+
+        if (userId && userId !== "0") {
+            buttons.push({
+                type: 2,
+                style: 5,
+                label: "👤 View Profile",
+                url: `https://www.roblox.com/users/${userId}/profile`
+            });
+        }
+
+        const payload = {
+            username: "Telemetry Engine",
+            avatar_url: checkedAvatar,
+            embeds: [embed],
+            // Only add components if there are valid buttons
+            ...(buttons.length > 0 && {
+                components: [{
+                    type: 1,
+                    components: buttons
+                }]
+            })
+        };
+
+        const webhookRes = await fetch(process.env.DISCORD_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!webhookRes.ok) {
+            const errorText = await webhookRes.text();
+            console.error("Discord webhook error:", webhookRes.status, errorText);
+            console.error("Payload:", JSON.stringify(payload, null, 2));
+            throw new Error(`Discord error ${webhookRes.status}: ${errorText}`);
+        }
+
+        return res.status(200).json({ status: 'Success' });
+
+    } catch (error) {
+        console.error("Handler error:", error.message);
+        return res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    }
+}
+        const estimatedRegion = ping === 0
+            ? "❓ No Data"
+            : ping < 50
+                ? "🇺🇸 US-Optimized"
+                : ping < 150
+                    ? "🇪🇺 EU-Hop"
+                    : "🌏 Global-Route";
+
+        // Avatar fetching
+        let checkedAvatar = "https://i.imgur.com/wSTFkRM.png";
+        try {
+            const avatarUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=180x180&format=Png`;
+            const thumbResponse = await fetch(avatarUrl);
+            if (thumbResponse.ok) {
+                const thumbData = await thumbResponse.json();
+                const imageUrl = thumbData?.data?.[0]?.imageUrl;
+                if (imageUrl) checkedAvatar = imageUrl;
+            }
+        } catch (e) {
+            console.error("Avatar fetch failed:", e.message);
+        }
+
+        const embed = {
+            title: "📈 Comprehensive Session Report",
+            color: 30719,
+            thumbnail: { url: checkedAvatar },
+            fields: [
+                { name: "👤 User Identity", value: `**Name:** ${username}\n**Display:** ${displayName}\n**ID:** \`${userId}\``, inline: true },
+                { name: "⏳ Stats",          value: `**Age:** ${accountAge}\n**Tier:** ${membership}\n**Locale:** ${locale}`,    inline: true },
+                { name: "⚙️ Client",         value: `**Executor:** ${executorName}\n**Device:** ${deviceType}`,                 inline: true },
+                { name: "🗺️ Environment",    value: `**Game:** ${gameTitle}\n**Place ID:** \`${placeId}\``,                     inline: true },
+                { name: "👥 Server",         value: `**Capacity:** ${playerCapacity}\n**Team:** ${currentTeam}`,               inline: true },
+                { name: "❤️ Health",         value: `**Status:** ${localHealth}/${localMaxHealth}\n**Region:** ${estimatedRegion}`, inline: true },
+                { name: "🆔 Server Instance (Job ID)", value: `\`${jobId || "N/A"}\``, inline: false },
+                { name: "📊 Performance",    value: `**Ping:** ${ping}ms | **FPS:** ${fps}\n**Pos:** \`${location}\``,         inline: false },
+                { name: "📝 Custom Log",     value: `\`\`\`${customMessage}\`\`\``,                                            inline: false }
+            ],
+            footer: { text: "Secure Vercel Telemetry Pipeline" },
+            timestamp: new Date().toISOString()
+        };
+
         const payload = {
             username: "Telemetry Engine",
             avatar_url: checkedAvatar,
