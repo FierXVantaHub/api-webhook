@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed.' });
   }
 
-  // 1. Check your process.env for security
+  // Security Check
   const serverSecret = process.env.EXECUTOR_SECRET; 
   const clientSecret = req.headers['authorization'];
 
@@ -14,26 +14,74 @@ export default async function handler(req, res) {
   const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1512097820012838933/lhu_3wEX2XE63R5A4lqgaYEwZoixepPr8nGT5vm6zif_hBeY3qTZwd-Gc1Nj9-6LjH0Y';
 
   try {
-    // 2. Parse client data safely
     let gameData = req.body;
     if (typeof gameData === 'string') {
-      try {
-        gameData = JSON.parse(gameData);
-      } catch (e) {
-        gameData = { rawText: gameData };
-      }
+      try { gameData = JSON.parse(gameData); } catch (e) { gameData = { CustomMessage: gameData }; }
     }
 
-    // 3. Pull the Executor name out of the data sent by the client
-    // Default to "Unknown Executor" if the script didn't send one
-    const executorName = gameData.ExecutorUsed || "Unknown Executor";
+    // Extracting all the extra metadata fields
+    const username = gameData.Username || "Unknown";
+    const userId = gameData.UserId || "0";
+    const accountAge = gameData.AccountAge || "Unknown";
+    const membership = gameData.MembershipType || "None";
+    
+    const executorName = gameData.ExecutorUsed || "Unknown";
+    const placeId = gameData.PlaceId || "0";
+    const job臨 = gameData.JobId || "Not Public";
+    
+    const ping = gameData.Ping || "N/A";
+    const fps = gameData.FPS || "N/A";
+    const location = gameData.Location || "Unknown";
+    const customMessage = gameData.CustomMessage || "*No message*";
 
-    // 4. Format the Discord Embed
     const discordPayload = {
-      // This prints the executor name right at the very top of the Discord message!
-      content: `🚀 **New Execution Detected via: ${executorName}**`,
+      username: "Advanced Game Analytics",
+      avatar_url: "https://i.imgur.com/wSTFkRM.png",
       embeds: [
         {
+          title: "📊 Comprehensive Execution Log",
+          color: 3447003, // Slate Blue
+          fields: [
+            {
+              name: "👤 User Profile",
+              value: `**User:** [${username}](https://www.roblox.com/users/${userId}/profile)\n**ID:** \`${userId}\`\n**Age:** ${accountAge} days\n**Tier:** ${membership}`,
+              inline: true
+            },
+            {
+              name: "⚙️ Script Environment",
+              value: `**Executor:** \`${executorName}\`\n**Place ID:** \`${placeId}\`\n**Server JobId:**\n\`${job臨}\``,
+              inline: true
+            },
+            {
+              name: "📈 Client Performance & Telemetry",
+              value: `**Ping:** ${ping}ms\n**FPS:** ${fps}\n**Position:** \`${location}\``,
+              inline: false
+            },
+            {
+              name: "📝 Submitted UI Text",
+              value: `\`\`\`text\n${customMessage}\n\`\`\``,
+              inline: false
+            }
+          ],
+          timestamp: new Date().toISOString(),
+          footer: { text: "Private Test Environment Telemetry" }
+        }
+      ]
+    };
+
+    const discordResponse = await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(discordPayload),
+    });
+
+    if (!discordResponse.ok) throw new Error(`Discord Status: ${discordResponse.status}`);
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+}
           title: "Client Data Log",
           description: "```json\n" + JSON.stringify(gameData, null, 2) + "\n```",
           color: 10181046 // Purple color
@@ -57,5 +105,4 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ success: false, error: error.message });
-  }
-}
+  
