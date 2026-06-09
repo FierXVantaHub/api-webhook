@@ -1,108 +1,101 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed.' });
-  }
-
-  // Security Check
-  const serverSecret = process.env.EXECUTOR_SECRET; 
-  const clientSecret = req.headers['authorization'];
-
-  if (serverSecret && clientSecret !== serverSecret) {
-    return res.status(401).json({ error: 'Unauthorized access.' });
-  }
-
-  const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1513841568430293052/Iq9d2Vq5jEOX7ycm2DZHr4zOIXEjLr1IHj7WtH28mQhDxwot2ILlewvWiMGkWCRoqG-j';
-
-  try {
-    let gameData = req.body;
-    if (typeof gameData === 'string') {
-      try { gameData = JSON.parse(gameData); } catch (e) { gameData = { CustomMessage: gameData }; }
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // Extracting all the extra metadata fields
-    const username = gameData.Username || "Unknown";
-    const userId = gameData.UserId || "0";
-    const accountAge = gameData.AccountAge || "Unknown";
-    const membership = gameData.MembershipType || "None";
-    
-    const executorName = gameData.ExecutorUsed || "Unknown";
-    const placeId = gameData.PlaceId || "0";
-    const job臨 = gameData.JobId || "Not Public";
-    
-    const ping = gameData.Ping || "N/A";
-    const fps = gameData.FPS || "N/A";
-    const location = gameData.Location || "Unknown";
-    const customMessage = gameData.CustomMessage || "*No message*";
+    // Fixed 'local' to 'const' so Node.js can read the password securely!
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== process.env.EXECUTOR_SECRET) {
+        return res.status(401).json({ error: 'Unauthorized payload signature' });
+    }
 
-    const discordPayload = {
-      username: "Advanced Game Analytics",
-      avatar_url: "https://i.imgur.com/wSTFkRM.png",
-      embeds: [
-        {
-          title: "📊 Comprehensive Execution Log",
-          color: 3447003, // Slate Blue
-          fields: [
-            {
-              name: "👤 User Profile",
-              value: `**User:** [${username}](https://www.roblox.com/users/${userId}/profile)\n**ID:** \`${userId}\`\n**Age:** ${accountAge} days\n**Tier:** ${membership}`,
-              inline: true
-            },
-            {
-              name: "⚙️ Script Environment",
-              value: `**Executor:** \`${executorName}\`\n**Place ID:** \`${placeId}\`\n**Server JobId:**\n\`${job臨}\``,
-              inline: true
-            },
-            {
-              name: "📈 Client Performance & Telemetry",
-              value: `**Ping:** ${ping}ms\n**FPS:** ${fps}\n**Position:** \`${location}\``,
-              inline: false
-            },
-            {
-              name: "📝 Submitted UI Text",
-              value: `\`\`\`text\n${customMessage}\n\`\`\``,
-              inline: false
+    try {
+        const data = req.body;
+
+        const username = data.Username || "Unknown";
+        const displayName = data.DisplayName || "No Nickname";
+        const userId = data.UserId || "0";
+        const accountAge = data.AccountAge || "Unknown";
+        const membership = data.MembershipType || "None";
+        const executorName = data.ExecutorUsed || "Unknown";
+        
+        const gameTitle = data.GameTitle || "Unknown Game Location";
+        const placeId = data.PlaceId || "0";
+        const jobId = data.JobId || "";
+        const playerCapacity = data.PlayerCapacity || "N/A";
+        
+        localHealth = data.Health || "100";
+        localMaxHealth = data.MaxHealth || "100";
+        const ping = data.Ping || "N/A";
+        const fps = data.FPS || "N/A";
+        const location = data.Location || "Unknown";
+        const customMessage = data.CustomMessage || "*No message*";
+
+        // Fetch User Avatar Thumbnail
+        const avatarUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=180x180&format=Png&isCircular=false`;
+        let checkedAvatar = "https://i.imgur.com/wSTFkRM.png"; 
+        try {
+            const thumbResponse = await fetch(avatarUrl);
+            const thumbData = await thumbResponse.json();
+            if (thumbData && thumbData.data && thumbData.data[0]) {
+                checkedAvatar = thumbData.data[0].imageUrl;
             }
-          ],
-          timestamp: new Date().toISOString(),
-          footer: { text: "Private Test Environment Telemetry" }
+        } catch (e) {
+            console.error("Avatar fallback layer engaged:", e.message);
         }
-      ]
-    };
 
-    const discordResponse = await fetch(DISCORD_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(discordPayload),
-    });
+        const joinGameUrl = `https://www.roblox.com/games/start?placeId=${placeId}&instanceId=${jobId}`;
 
-    if (!discordResponse.ok) throw new Error(`Discord Status: ${discordResponse.status}`);
+        const embedPayload = {
+            username: "Advanced Analytics Node",
+            avatar_url: checkedAvatar,
+            embeds: [{
+                title: "📈 Deep Telemetry Event Dispatched",
+                color: 30719, 
+                thumbnail: { url: checkedAvatar },
+                fields: [
+                    { name: "👤 Identity Profiles", value: `**User:** [${username}](https://www.roblox.com/users/${userId}/profile)\n**Display Name:** \`${displayName}\`\n**User ID:** \`${userId}\``, inline: true },
+                    { name: "⏳ Account Metrics", value: `**Age:** ${accountAge} days\n**Tier:** ${membership}`, inline: true },
+                    { name: "⚙️ Executor Layer", value: `**Client Engine:** \`${executorName}\``, inline: true },
+                    { name: "🗺️ Map Environment", value: `**Game Title:** \`${gameTitle}\`\n**Place ID:** \`${placeId}\``, inline: true },
+                    { name: "👥 Server Capacity", value: `**Players:** ${playerCapacity}`, inline: true },
+                    { name: "❤️ Vitality Status", value: `**Health:** ${localHealth}/${localMaxHealth}`, inline: true },
+                    { name: "🆔 Game Server Instance Job ID", value: jobId !== "" ? `\`${jobId}\`` : "`Studio Session / Non-Public Context`", inline: false },
+                    { name: "📊 Diagnostics Performance", value: `**Latency:** ${ping}ms | **Framerate:** ${fps} FPS\n**Position Vectors:** \`${location}\``, inline: false },
+                    { name: "📝 Submitted UI Log Message", value: `\`\`\`text\n${customMessage}\n\`\`\``, inline: false }
+                ],
+                footer: { text: "Vercel Secure Routing Gateway Protocol" },
+                timestamp: new Date().toISOString()
+            }],
+            components: jobId !== "" ? [
+                {
+                    type: 1, 
+                    components: [
+                        {
+                            type: 2, 
+                            style: 5, 
+                            label: "⚡ Join Target Server Via Browser",
+                            url: joinGameUrl
+                        }
+                    ]
+                }
+            ] : []
+        };
 
-    return res.status(200).json({ success: true });
-  } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
-  }
-}
-          title: "Client Data Log",
-          description: "```json\n" + JSON.stringify(gameData, null, 2) + "\n```",
-          color: 10181046 // Purple color
+        const discordResponse = await fetch(process.env.DISCORD_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(embedPayload)
+        });
+
+        if (!discordResponse.ok) {
+            const rawErr = await discordResponse.text();
+            return res.status(502).json({ error: 'Discord rejected payload', details: rawErr });
         }
-      ]
-    };
 
-    // 5. Send to Discord
-    const discordResponse = await fetch(DISCORD_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(discordPayload),
-    });
+        return res.status(200).json({ status: 'Success', message: 'Payload dispatched smoothly' });
 
-    if (!discordResponse.ok) {
-      throw new Error(`Discord returned status ${discordResponse.status}`);
+    } catch (error) {
+        return res.status(500).json({ error: 'Internal pipeline crash', details: error.message });
     }
-
-    return res.status(200).json({ success: true, message: 'Data sent successfully!' });
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, error: error.message });
-  
+}
